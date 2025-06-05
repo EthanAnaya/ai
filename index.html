@@ -80,7 +80,7 @@
         <div id="chat-window">
              <div class="message bot-message">
                 <span class="label">Bot</span>
-                <span>Hello! I am a simple neural network chatbot. Try asking me something like "how are you" or "what is your name".</span>
+                <span>Hello! I am a simple neural network chatbot. My knowledge has been expanded.</span>
             </div>
         </div>
         <div id="input-area">
@@ -101,19 +101,96 @@
         const sigmoidDerivative = (y) => y * (1 - y);
 
         // --- 1. DATA PREPROCESSING ---
+        // Expanded dataset with more varied sentences.
         const trainingData = [
+            // Greetings
             { input: "hello", output: "hi there" },
             { input: "hi", output: "hello" },
-            { input: "how are you", output: "i am doing well" },
-            { input: "what is your name", output: "i am a simple bot" },
+            { input: "hey", output: "hey there" },
+            { input: "how are you", output: "i am doing well thank you" },
+            { input: "how is it going", output: "it is going well" },
+            { input: "what's up", output: "not much just processing data" },
+            { input: "good morning", output: "good morning to you too" },
+            { input: "good afternoon", output: "good afternoon" },
+
+            // Farewells
             { input: "goodbye", output: "see you later" },
             { input: "bye", output: "goodbye" },
+            { input: "see you", output: "take care" },
+            { input: "take care", output: "you too" },
+            { input: "have a good day", output: "thanks you too" },
+
+            // Bot Identity
+            { input: "what is your name", output: "i am a simple bot" },
+            { input: "who are you", output: "i am a chatbot created in javascript" },
+            { input: "what can you do", output: "i can respond to a set of phrases" },
+            { input: "are you a robot", output: "yes i am a software robot" },
+            { input: "what are you made of", output: "i am made of code" },
+
+            // Simple Questions
+            { input: "how old are you", output: "i do not have an age" },
+            { input: "where do you live", output: "i live in your browser" },
+            { input: "what is the time", output: "i do not have access to the time" },
+            { input: "what is the date", output: "i cannot tell the date" },
+            { input: "what is the weather like", output: "i am not able to check the weather" },
+
+            // Politeness
+            { input: "thank you", output: "you are welcome" },
+            { input: "thanks", output: "no problem" },
+            { input: "pardon", output: "i am sorry i do not understand" },
+            { input: "sorry", output: "it is okay" },
+            { input: "excuse me", output: "yes how can i help" },
+
+            // Basic conversation
+            { input: "how was your day", output: "as a bot i do not have days but thanks for asking" },
+            { input: "do you have hobbies", output: "my hobby is processing text" },
+            { input: "what do you like", output: "i like data and patterns" },
+            { input: "what do you dislike", output: "i dislike errors in my code" },
+            { input: "are you smart", output: "i only know what i was trained on" },
+            { input: "can you help me", output: "i can try what do you need" },
+            { input: "tell me a joke", output: "why did the javascript developer wear glasses because he did not c sharp" },
+            { input: "tell me something interesting", output: "the neural network that powers me learns by adjusting numbers" },
+
+            // Agreement / Disagreement
+            { input: "okay", output: "glad you agree" },
+            { input:e: "ok", output: "sounds good" },
+            { input: "yes", output: "great" },
+            { input: "no", output: "i understand" },
+            { input: "i agree", output: "me too" },
+            { input: "i do not agree", output: "that is okay we can have different views" },
+            
+            // More questions
+            { input: "what is html", output: "html is hyper text markup language for creating web pages" },
+            { input: "what is css", output: "css is cascading style sheets for styling web pages" },
+            { input: "what is javascript", output: "javascript is a programming language that makes websites interactive" },
+            { input: "what is a neural network", output: "it is a computer system modeled on the human brain" },
+            { input: "do you sleep", output: "i do not require sleep" },
+            { input: "are you human", output: "no i am a machine" },
+            { input: "can you think", output: "i can process information but i do not think like a human" },
+            { input: "what is your purpose", output: "my purpose is to demonstrate how a simple chatbot works" },
+            
+            // Filler conversation
+            { input: "that is cool", output: "i am glad you think so" },
+            { input: "really", output: "yes" },
+            { input: "i am bored", output: "you could try teaching me new sentences" },
+            { input: "what should i do", output: "you can ask me another question" },
+            { input: "you are funny", output: "thank you i try" },
+            { input: "you are helpful", output: "i am happy to help" },
+            { input: "i have a question", output: "please ask" },
+            { input: "can i ask something", output: "of course" },
+
+            // Simple commands
+            { input: "tell me more", output: "i am a feedforward neural network with one hidden layer" },
+            { input: "explain that", output: "i process your input through layers of nodes to find the best response" },
+            { input: "say hello world", output: "hello world" },
+            { input: "repeat after me hello", output: "hello" },
+            { input: "what else", output: "i can only answer predefined questions for now" },
         ];
 
         const vocabulary = new Set();
         trainingData.forEach(pair => {
-            pair.input.split(' ').forEach(word => vocabulary.add(word.toLowerCase()));
-            pair.output.split(' ').forEach(word => vocabulary.add(word.toLowerCase()));
+            if(pair.input) pair.input.split(' ').forEach(word => vocabulary.add(word.toLowerCase()));
+            if(pair.output) pair.output.split(' ').forEach(word => vocabulary.add(word.toLowerCase()));
         });
 
         const vocabArray = Array.from(vocabulary);
@@ -134,7 +211,7 @@
         const trainingSet = trainingData.map(pair => ({
             input: vectorize(pair.input),
             output: vectorize(pair.output)
-        }));
+        })).filter(p => p.input && p.output); // Ensure no empty pairs
 
         // --- 2. & 3. NEURAL NETWORK ARCHITECTURE & CORE COMPONENTS ---
         class NeuralNetwork {
@@ -219,23 +296,23 @@
             const inputVector = vectorize(inputText);
             const { finalOutputs } = network.forward(inputVector);
             const responseTokens = [];
-            const activationThreshold = 0.6;
+            const activationThreshold = 0.7; // Adjusted threshold for a larger dataset
             finalOutputs.forEach((value, index) => {
                 if (value > activationThreshold) {
                     responseTokens.push(vocabArray[index]);
                 }
             });
-            return responseTokens.length > 0 ? responseTokens.join(' ') : "I am not sure how to respond.";
+            return responseTokens.length > 0 ? responseTokens.join(' ') : "I am not sure how to respond to that.";
         }
 
         // --- EXECUTION & WEBSITE INTERACTION ---
 
         // Define network parameters
         const inputSize = vocabSize;
-        const hiddenSize = 12;
+        const hiddenSize = Math.round(inputSize * 0.75); // Hidden size can be adjusted
         const outputSize = vocabSize;
         const learningRate = 0.1;
-        const epochs = 3000;
+        const epochs = 4000; // Increased epochs for the larger dataset
 
         // Initialize and train the neural network
         const bot = new NeuralNetwork(inputSize, hiddenSize, outputSize);
