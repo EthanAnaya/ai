@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Neural Network Chatbot</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f6f8;
+            color: #121212;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #chat-container {
+            width: 400px;
+            height: 600px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+        #chat-window {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #eee;
+        }
+        .message {
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        .message .label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.9em;
+        }
+        .user-message .label {
+            color: #007bff;
+        }
+        .bot-message .label {
+            color: #28a745;
+        }
+        #input-area {
+            display: flex;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+        #user-input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        #send-button {
+            border: none;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            margin-left: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        #send-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="chat-container">
+        <div id="chat-window">
+             <div class="message bot-message">
+                <span class="label">Bot</span>
+                <span>Hello! I am a simple neural network chatbot. Try asking me something like "how are you" or "what is your name".</span>
+            </div>
+        </div>
+        <div id="input-area">
+            <input type="text" id="user-input" placeholder="Type a message...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * =====================================================================
+         * Simple Neural Network Chatbot in JavaScript (from Scratch)
+         * =====================================================================
+         */
+
+        // --- UTILITY FUNCTIONS ---
+        const sigmoid = (x) => 1 / (1 + Math.exp(-x));
+        const sigmoidDerivative = (y) => y * (1 - y);
+
+        // --- 1. DATA PREPROCESSING ---
+        const trainingData = [
+            { input: "hello", output: "hi there" },
+            { input: "hi", output: "hello" },
+            { input: "how are you", output: "i am doing well" },
+            { input: "what is your name", output: "i am a simple bot" },
+            { input: "goodbye", output: "see you later" },
+            { input: "bye", output: "goodbye" },
+        ];
+
+        const vocabulary = new Set();
+        trainingData.forEach(pair => {
+            pair.input.split(' ').forEach(word => vocabulary.add(word.toLowerCase()));
+            pair.output.split(' ').forEach(word => vocabulary.add(word.toLowerCase()));
+        });
+
+        const vocabArray = Array.from(vocabulary);
+        const vocabSize = vocabArray.length;
+
+        function vectorize(text) {
+            const vector = new Array(vocabSize).fill(0);
+            const tokens = text.toLowerCase().split(' ');
+            tokens.forEach(token => {
+                const index = vocabArray.indexOf(token);
+                if (index !== -1) {
+                    vector[index] = 1;
+                }
+            });
+            return vector;
+        }
+
+        const trainingSet = trainingData.map(pair => ({
+            input: vectorize(pair.input),
+            output: vectorize(pair.output)
+        }));
+
+        // --- 2. & 3. NEURAL NETWORK ARCHITECTURE & CORE COMPONENTS ---
+        class NeuralNetwork {
+            constructor(inputSize, hiddenSize, outputSize) {
+                this.inputSize = inputSize;
+                this.hiddenSize = hiddenSize;
+                this.outputSize = outputSize;
+                this.weights_ih = this.createMatrix(this.hiddenSize, this.inputSize);
+                this.bias_h = new Array(this.hiddenSize).fill(0).map(() => Math.random() - 0.5);
+                this.weights_ho = this.createMatrix(this.outputSize, this.hiddenSize);
+                this.bias_o = new Array(this.outputSize).fill(0).map(() => Math.random() - 0.5);
+            }
+
+            createMatrix(rows, cols) {
+                return Array.from({ length: rows }, () =>
+                    Array.from({ length: cols }, () => Math.random() - 0.5)
+                );
+            }
+
+            forward(inputVector) {
+                const hiddenOutputs = new Array(this.hiddenSize);
+                for (let j = 0; j < this.hiddenSize; j++) {
+                    let sum = this.bias_h[j];
+                    for (let i = 0; i < this.inputSize; i++) {
+                        sum += inputVector[i] * this.weights_ih[j][i];
+                    }
+                    hiddenOutputs[j] = sigmoid(sum);
+                }
+                const finalOutputs = new Array(this.outputSize);
+                for (let k = 0; k < this.outputSize; k++) {
+                    let sum = this.bias_o[k];
+                    for (let j = 0; j < this.hiddenSize; j++) {
+                        sum += hiddenOutputs[j] * this.weights_ho[k][j];
+                    }
+                    finalOutputs[k] = sigmoid(sum);
+                }
+                return { hiddenOutputs, finalOutputs };
+            }
+
+            train(inputVector, targetVector, learningRate) {
+                const { hiddenOutputs, finalOutputs } = this.forward(inputVector);
+                const outputErrors = new Array(this.outputSize);
+                for (let k = 0; k < this.outputSize; k++) {
+                    outputErrors[k] = targetVector[k] - finalOutputs[k];
+                }
+                const hiddenErrors = new Array(this.hiddenSize);
+                for (let j = 0; j < this.hiddenSize; j++) {
+                    let error = 0;
+                    for (let k = 0; k < this.outputSize; k++) {
+                        error += outputErrors[k] * this.weights_ho[k][j];
+                    }
+                    hiddenErrors[j] = error;
+                }
+                for (let k = 0; k < this.outputSize; k++) {
+                    const gradient = outputErrors[k] * sigmoidDerivative(finalOutputs[k]);
+                    for (let j = 0; j < this.hiddenSize; j++) {
+                        this.weights_ho[k][j] += learningRate * gradient * hiddenOutputs[j];
+                    }
+                    this.bias_o[k] += learningRate * gradient;
+                }
+                for (let j = 0; j < this.hiddenSize; j++) {
+                    const gradient = hiddenErrors[j] * sigmoidDerivative(hiddenOutputs[j]);
+                    for (let i = 0; i < this.inputSize; i++) {
+                        this.weights_ih[j][i] += learningRate * gradient * inputVector[i];
+                    }
+                    this.bias_h[j] += learningRate * gradient;
+                }
+            }
+        }
+
+        // --- TRAINING PROCESS ---
+        function startTraining(network, dataset, epochs, learningRate) {
+            for (let epoch = 0; epoch < epochs; epoch++) {
+                dataset.forEach(dataPair => {
+                    network.train(dataPair.input, dataPair.output, learningRate);
+                });
+            }
+        }
+
+        // --- RESPONSE GENERATION ---
+        function generateResponse(network, inputText) {
+            const inputVector = vectorize(inputText);
+            const { finalOutputs } = network.forward(inputVector);
+            const responseTokens = [];
+            const activationThreshold = 0.6;
+            finalOutputs.forEach((value, index) => {
+                if (value > activationThreshold) {
+                    responseTokens.push(vocabArray[index]);
+                }
+            });
+            return responseTokens.length > 0 ? responseTokens.join(' ') : "I am not sure how to respond.";
+        }
+
+        // --- EXECUTION & WEBSITE INTERACTION ---
+
+        // Define network parameters
+        const inputSize = vocabSize;
+        const hiddenSize = 12;
+        const outputSize = vocabSize;
+        const learningRate = 0.1;
+        const epochs = 3000;
+
+        // Initialize and train the neural network
+        const bot = new NeuralNetwork(inputSize, hiddenSize, outputSize);
+        startTraining(bot, trainingSet, epochs, learningRate);
+
+        // --- DOM MANIPULATION ---
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+
+        function addMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            const messageClass = sender === 'User' ? 'user-message' : 'bot-message';
+            messageDiv.classList.add('message', messageClass);
+            
+            messageDiv.innerHTML = `<span class="label">${sender}</span><span>${text}</span>`;
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight; // Auto-scroll to the bottom
+        }
+
+        function handleUserRequest() {
+            const messageText = userInput.value.trim();
+            if (messageText === "") return;
+
+            addMessage("User", messageText);
+            userInput.value = "";
+
+            // Get bot response after a short delay to simulate "thinking"
+            setTimeout(() => {
+                const botResponse = generateResponse(bot, messageText);
+                addMessage("Bot", botResponse);
+            }, 400);
+        }
+
+        sendButton.addEventListener('click', handleUserRequest);
+        userInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                handleUserRequest();
+            }
+        });
+
+    </script>
+</body>
+</html>
